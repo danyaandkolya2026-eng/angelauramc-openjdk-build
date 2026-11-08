@@ -1,0 +1,61 @@
+
+name: Build iOS JRE 17 and 21
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - buildjre17-21
+    paths:
+      - ".github/workflows/build-ios-jre.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build_ios:
+    name: Build JRE ${{ matrix.version }} for iOS ARM64
+    runs-on: macos-latest
+    timeout-minutes: 360
+
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [17, 21]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.version }}
+          distribution: temurin
+
+      - name: Check build environment
+        run: |
+          set -e
+          test "$(uname -m)" = "arm64"
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-path
+          xcrun --sdk macosx --show-sdk-path
+          java -version
+          /usr/libexec/java_home -v ${{ matrix.version }}
+
+      - name: Build iOS JRE
+        env:
+          BUILD_IOS: "1"
+          TARGET_VERSION: ${{ matrix.version }}
+        run: |
+          export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
+          unset J316SAP
+          bash "1_ci_build_arch_aarch64.sh"
+
+      - name: Upload iOS JRE
+        uses: actions/upload-artifact@v4
+        with:
+          name: jre${{ matrix.version }}-ios-aarch64
+          path: jre${{ matrix.version }}-ios*.tar.xz
+          if-no-files-found: error
+          retention-days: 30
