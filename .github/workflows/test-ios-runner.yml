@@ -1,0 +1,43 @@
+
+name: Test iOS build runner
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/test-ios-runner.yml"
+
+jobs:
+  test:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        java: [17, 21]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+
+      - name: Check Xcode and SDKs
+        run: |
+          uname -a
+          uname -p
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-path
+          xcrun --sdk macosx --show-sdk-path
+
+      - name: Check dependencies
+        run: |
+          brew --version
+          brew list --versions fontconfig ldid autoconf || true
+          ls -ld /opt/X11/include/X11 || true
+          ls -ld /opt/homebrew/include/fontconfig || true
+          ls -ld /usr/local/include/fontconfig || true
+          java -version
+          /usr/libexec/java_home -v ${{ matrix.java }}
